@@ -13,8 +13,6 @@ import java.io.IOException;
 public class PrefixToPostfixConverter {
     private String prefixInput;
     private String postfixOutput;
-    private boolean errorOnWhitespace;
-    private boolean continueOnError;
     private int pos;
     private String error;
 
@@ -22,10 +20,9 @@ public class PrefixToPostfixConverter {
      * The constructor will take in an input path, output path, and enhancements
      * that will be used by the preToPost method.
      */
-    public PrefixToPostfixConverter(String inputPath, String outputPath, String enhancement) {
+    public PrefixToPostfixConverter(String inputPath, String outputPath) {
 	prefixInput = inputPath;
 	postfixOutput = outputPath;
-	initializeEnhancement(enhancement);
 
     }
 
@@ -37,8 +34,6 @@ public class PrefixToPostfixConverter {
 	String postfixString;
 	BufferedReader input = null;
 	BufferedWriter output = null;
-	char currentChar;
-	boolean hasError;
 	BinaryTree p2pTree = null;
 
 	// Use bufferedreader and writer to read and write to files defined in
@@ -57,36 +52,56 @@ public class PrefixToPostfixConverter {
 	while (prefixString != null) {
 	    pos = 0;
 	    error = "";
-	    if (isValidOperator(prefixString.charAt(pos))) {
+	    prefixString = removeWhitespaces(prefixString);
+
+	    if (prefixString == "") {
+
+	    } else if (isValidOperator(prefixString.charAt(pos))) {
+
 		p2pTree = new BinaryTree();
 		postfixString = convert(p2pTree.getRoot(), prefixString).getData();
-		System.out.println(postfixString);
+
+		// Determine if follow on character exist in the prefix string
+		try {
+		    if (!Character.isWhitespace(prefixString.charAt(++pos))) {
+			postfixString = "Invalid prefix String";
+		    }
+		} catch (Exception e) {
+		}
+		writeToFile(prefixString + " -> " + postfixString, output);
 	    } else {
-		System.out.println("Not Valid prefix");
-		error = "Not a Valid Prefix";
+		postfixString = "Invalid prefix String";
+		writeToFile(prefixString + " -> " + postfixString, output);
 	    }
 
 	    prefixString = readInputLine(input);
 	}
 	output.close();
+
     }
 
     public Node convert(Node node, String prefixString) {
-//	System.out.println(prefixString.charAt(pos));
-	if (isValidOperator(prefixString.charAt(pos))) {
-	    node.setData(Character.toString(prefixString.charAt(pos)));
-	    node.setLeft(convert(new Node(Character.toString(prefixString.charAt(pos++))), prefixString));
-	    node.setRight(convert(new Node(Character.toString(prefixString.charAt(pos++))), prefixString));
-	} else if (isValidOperand(prefixString.charAt(pos))) {
-	    return new Node(Character.toString(prefixString.charAt(pos)));
-	} else {
-	    error = "Invalid Char";
-	}
-	if (error != "") {
+	try {
+	    if (isValidOperator(prefixString.charAt(pos))) {
+		node.setData(Character.toString(prefixString.charAt(pos)));
+		node.setLeft(convert(new Node(Character.toString(prefixString.charAt(pos++))), prefixString));
+		node.setRight(convert(new Node(Character.toString(prefixString.charAt(pos++))), prefixString));
+	    } else if (isValidOperand(prefixString.charAt(pos))) {
+		return new Node(Character.toString(prefixString.charAt(pos)));
+	    } else if (Character.isWhitespace(prefixString.charAt(pos))) {
+		error = "Contains Whitespace";
+	    } else {
+		error = "Invalid Char";
+	    }
+	    if (error != "") {
+		return new Node(error);
+	    } else {
+		node.setData(node.getLeft().getData() + node.getRight().getData() + node.getData());
+		return node;
+	    }
+	} catch (Exception e) {
+	    error = "Invalid prefix String";
 	    return new Node(error);
-	} else {
-	    node.setData(node.getLeft().getData() + node.getRight().getData() + node.getData());
-	    return node;
 	}
     }
 
@@ -122,6 +137,24 @@ public class PrefixToPostfixConverter {
     }
 
     /**
+     * This method is used to remove all whitespace in the prefix String
+     * 
+     * @param prefixString
+     * @return prefix string with all whitespace removed
+     */
+    private String removeWhitespaces(String prefixString) {
+	String resultString = "";
+
+	for (int i = 0; i < prefixString.length(); i++) {
+	    if (!Character.isWhitespace(prefixString.charAt(i))) {
+		resultString += prefixString.charAt(i);
+	    }
+	}
+
+	return resultString;
+    }
+
+    /**
      * Method to write string to output file
      * 
      * @param outputString  String to be written to output file
@@ -129,48 +162,12 @@ public class PrefixToPostfixConverter {
      */
     private void writeToFile(String outputString, BufferedWriter postfixOutput) {
 	try {
+	    System.out.println(outputString);
 	    postfixOutput.write(outputString, 0, outputString.length());
 	    postfixOutput.newLine();
 	} catch (IOException iox) {
 	    System.err.println(iox.toString());
 	    System.exit(2);
-	}
-    }
-
-    /**
-     * Method to process an error and write to file based on continue on error
-     * variable
-     * 
-     * @param errorString     Error string to be written to output file
-     * @param postfixOuput    output file
-     * @param continueOnError variable to exit or continue
-     * @throws IOException
-     */
-    private void errorToFile(String errorString, BufferedWriter postfixOuput, boolean continueOnError)
-	    throws IOException {
-	System.out.println(errorString);
-	writeToFile(errorString, postfixOuput);
-	if (!continueOnError) {
-	    postfixOuput.close();
-	    System.exit(2);
-	}
-    }
-
-    /**
-     * Method to initialize enhancements
-     * 
-     * @param enhancements string of enhancement options
-     */
-    private void initializeEnhancement(String enhancements) {
-	for (int i = 0; i < enhancements.length(); i++) {
-	    switch (enhancements.charAt(i)) {
-		case 'e':
-		    errorOnWhitespace = true;
-		    break;
-		case 'c':
-		    continueOnError = true;
-		    break;
-	    }
 	}
     }
 

@@ -1,3 +1,6 @@
+/*
+ * Binary Implementation. Contains root node.
+ */
 package lab2;
 
 public class BinaryTree {
